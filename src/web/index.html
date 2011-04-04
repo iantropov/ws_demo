@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<title>Device List</title>
+		<link type="text/css" href="css/ui-lightness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />	
+		<script type="text/javascript" src="js/jquery-1.5.1.min.js"></script>
+		<script type="text/javascript" src="js/jquery-strings-0.3.js"></script>
+		<script type="text/javascript" src="js/jquery-ui-1.8.11.custom.min.js"></script>
+		<script type="text/javascript">
+		
+		function jsonRpcRequest(method, params)
+		{	
+			var req = {"jsonrpc":"2.0", "method":method, "id":1};
+			if (params)
+				req["params"] = params;
+				
+			return req;
+		}
+				
+		function addDevices(devices)
+		{
+			$.tpl('device', [
+			    '<div class="device">',
+				'<h3>',
+					'<a href="#">{info:s}</a>',
+				'</h3>',
+				'<div id="{id:i}" class="devicecontent">',
+					'<div class="output">',
+						'<span>Current status : </span>',
+						'<span class="status">{status:i}</span>',
+					'</div>',
+					'<input class="input" type="text"></input>',
+					'<div class="button" style="margin-left:40px">Send</div>',
+				'</div>',
+			    '</div>'
+			]);
+			
+			$.each(devices, 	function(idx, device)
+				{
+					$.tpl('device', device).appendTo("#devices");
+				}
+			);
+		};
+		
+		function jsonRpcCall(config)
+		{
+			$.ajax({
+				url:			"http://127.0.0.1:8080/devices",
+				type:		"POST",
+				success: 		config.callback,
+				data:		JSON.stringify(jsonRpcRequest(config.method, config.params)),
+				dataType:	"json",
+				contentType:	"application/json-rpc"				
+			});
+		}
+		
+		function getDevices()
+		{
+			jsonRpcCall({
+				callback: function(response)
+					{
+						if (response.error)
+							return;
+						addDevices(response.result);
+						accordion();
+					},
+				method : "get_devices"
+			});
+		};
+		
+		function createDelegate(callback, params, s)
+		{
+			var scope = s || window;
+			function delegate()
+			{
+				callback.apply(scope, params);
+			}
+			
+			return delegate;
+		}
+		
+		function timerCall(id)
+		{
+			jsonRpcCall({
+						callback : function(response)
+							{
+								if (response.error)
+									return;
+									
+								$("#" + id + " .status").html(response.result);
+							}, 
+						method : "get_device_status", 
+						params : {id: parseInt(id)}
+			});
+		};
+		
+		function accordion()
+		{
+			var TIME = 5000;
+			var timer;
+			$("#devices").accordion({ 
+					header: "h3", 
+					collapsible: true,
+					active: -1,
+					change: 	function(event, ui)
+							{
+								if (ui.newContent.length == 0)
+									clearInterval(timer);
+								else
+									timer = setInterval(createDelegate(timerCall, [ui.newContent[0].id]), TIME);
+							}
+			});
+			$(".devicecontent").each(function()
+			{
+					var device = this;
+					$(device).children(".button").button().bind("click", function()
+					{
+						var status = parseInt($(device).children("input")[0].value);
+						jsonRpcCall({
+									method:"set_device_status", 
+									params:{id:parseInt(device.id), status: status}
+									});
+					}
+			);
+			});
+		};
+		
+		function fakeGetDevices()
+		{
+			addDevices([{id:1, info:"First device"}, {id:3, info:"Third device"}]);
+			accordion();
+		};
+		
+		$(function(){
+			getDevices();
+			//fakeGetDevices();
+		});
+		</script>
+	</head>
+	<body>
+		<h1>Device List</h1>
+		<div id="devices" style="width:50%"></div>
+	</body>
+</html>
