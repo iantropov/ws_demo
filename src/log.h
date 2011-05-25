@@ -10,5 +10,6 @@
 
 void log_error(char *fmt, ...);
 void log_warn(char *fmt, ...);
+void log_info(char *fmt, ...);
 
 #endif /* LOG_H_ */

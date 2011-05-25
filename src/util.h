@@ -13,8 +13,6 @@ int get_file_size(char *path);
 
 int put_file_content(char *path, void *data, int size);
 
-char *string_copy(char *str);
-
 int string_ends_by(char *source, char *end);
 
 #endif /* RESOURCE_HANDLER_H_ */

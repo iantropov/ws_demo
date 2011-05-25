@@ -28,3 +28,12 @@ void log_warn(char *fmt, ...)
 	vfprintf(stderr, fmt, arg_list);
 	va_end(arg_list);
 }
+
+void log_info(char *fmt, ...)
+{
+	va_list arg_list;
+
+	va_start(arg_list, fmt);
+	vfprintf(stdout, fmt, arg_list);
+	va_end(arg_list);
+}

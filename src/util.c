@@ -24,22 +24,15 @@ int get_file_size(char *path)
 	return stat_uri.st_size;
 }
 
-static void *read_file(int fd, int length)
+static int read_file(int fd, void *buf, int length)
 {
-	void *buf = malloc(length);
-	if (buf == NULL) {
-		log_warn("%s : malloc failed\n", __func__);
-		return NULL;
-	}
-
-	void *origin_buf = buf;
 	int ret;
 	while (length > 0 && (ret = read(fd, buf, length)) != 0) {
 		if (ret == -1) {
 			if (errno == EINTR)
 				continue;
 
-			log_warn("%s : read failed\n", __func__);
+			log_info("%s : read failed\n", __func__);
 			goto error;
 		}
 
@@ -50,30 +43,41 @@ static void *read_file(int fd, int length)
 	if (length > 0)
 		goto error;
 
-	return origin_buf;
+	return 0;
 
 error:
-	free(origin_buf);
-	return NULL;
+	return -1;
 }
 
 void *get_file_content(char *path)
 {
 	int len_file = get_file_size(path);
 	if (len_file == -1) {
-		log_warn("stat : can`t find %s\n", path);
+		log_info("stat : can`t find %s\n", path);
 		return NULL;
 	}
 
 	int fd = open(path, O_RDONLY);
 	if (fd == -1) {
-		log_warn("open : can`t open %s\n", path);
+		log_info("open : can`t open %s\n", path);
 		return NULL;
 	}
 
-	void *buf = read_file(fd, len_file);
+	void *buf = malloc(len_file + 1);
+	if (buf == NULL) {
+		log_info("%s : malloc failed", __func__);
+		return NULL;
+	}
+
+	int ret = read_file(fd, buf, len_file);
+	((char *)buf)[len_file] = '\0';
 
 	close(fd);
+
+	if (ret == -1) {
+		free(buf);
+		return NULL;
+	}
 
 	return buf;
 }
@@ -86,7 +90,7 @@ static int write_file(int fd, void *data, int len)
 			if (errno == EINTR)
 				continue;
 
-			log_warn("%s : write failed\n", __func__);
+			log_info("%s : write failed\n", __func__);
 			break;
 		}
 
@@ -103,7 +107,7 @@ int put_file_content(char *path, void *data, int size)
 														S_IRGRP | S_IWGRP |
 														S_IROTH | S_IWOTH);
 	if (fd == -1) {
-		log_warn("open : failed open : %s\n", path);
+		log_info("open : failed open : %s\n", path);
 		return -1;
 	}
 
@@ -112,20 +116,6 @@ int put_file_content(char *path, void *data, int size)
 	close(fd);
 
 	return ret;
-}
-
-char *string_copy(char *source)
-{
-	if (source == NULL)
-		return NULL;
-
-	int len = strlen(source);
-	char *dest = (char *)malloc(len + 1);
-	if (dest == NULL) {
-		log_warn("%s : malloc failed\n", __func__);
-		return NULL;
-	}
-	return strcpy(dest, source);
 }
 
 int string_ends_by(char *str, char *end)

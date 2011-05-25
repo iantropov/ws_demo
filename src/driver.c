@@ -6,8 +6,9 @@
  */
 
 #include <stdlib.h>
-#include <jsonrpc/json.h>
-#include <jsonrpc/json_parser.h>
+#include <string.h>
+#include <json_rpc/json.h>
+#include <json_rpc/json_parser.h>
 
 #include "util.h"
 #include "log.h"
@@ -51,7 +52,7 @@ int driver_init(char *path)
 		id = json_int_get(json_object_get(device, "id"));
 		info = json_string_get(json_object_get(device, "info"));
 		device_statuses[id] = MIN_STATUS_VALUE;
-		device_infos[id] = string_copy(info);
+		device_infos[id] = strdup(info);
 	}
 
 	json_ref_put(devices);

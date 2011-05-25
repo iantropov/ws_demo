@@ -5,9 +5,10 @@
  *      Author: ant
  */
 
-#include <jsonrpc/json.h>
-#include <jsonrpc/json_rpc.h>
-#include <evhttp.h>
+#include <json_rpc/json.h>
+#include <json_rpc/json_rpc.h>
+#include <event0/evhttp.h>
+#include <event0/evhttps.h>
 #include <event.h>
 
 #include "util.h"
@@ -20,6 +21,10 @@
 
 #define HTTP_HOST "127.0.0.1"
 #define HTTP_PORT 8080
+
+#define SSL_CERT "serv.pem"
+#define SSL_KEYFILE "serv.pem"
+#define SSL_PASSWD "1234"
 
 #define GET_DEVICES_METHOD "get_devices"
 #define GET_DEVICE_STATUS_METHOD "get_device_status"
@@ -38,7 +43,7 @@
 
 #define DEVICES_FILE "devices"
 
-void get_devices(struct json_rpc *jr, struct json_object *obj, void *arg)
+void get_devices(struct json_rpc_request *jreq, struct json_object *obj, void *arg)
 {
 	char *info;
 	struct json_object *res = json_array_new(), *dev;
@@ -54,25 +59,25 @@ void get_devices(struct json_rpc *jr, struct json_object *obj, void *arg)
 		}
 	}
 
-	json_rpc_return(jr, res);
+	json_rpc_return(jreq, res);
 }
 
-void get_device_status(struct json_rpc *jr, struct json_object *obj, void *arg)
+void get_device_status(struct json_rpc_request *jreq, struct json_object *obj, void *arg)
 {
 	if (obj == NULL)
-		json_rpc_return(jr, NULL);
+		json_rpc_return(jreq, NULL);
 
 	int status = driver_get_device_status(json_int_get(json_object_get(obj, "id")));
 
 	json_ref_put(obj);
 
-	json_rpc_return(jr, json_int_new(status));
+	json_rpc_return(jreq, json_int_new(status));
 }
 
-void set_device_status(struct json_rpc *jr, struct json_object *obj, void *arg)
+void set_device_status(struct json_rpc_request *jreq, struct json_object *obj, void *arg)
 {
 	if (obj == NULL)
-		json_rpc_return(jr, NULL);
+		json_rpc_return(jreq, NULL);
 
 	int success = TRUE;
 
@@ -91,7 +96,7 @@ void set_device_status(struct json_rpc *jr, struct json_object *obj, void *arg)
 
 exit :
 	json_ref_put(obj);
-	json_rpc_return(jr, json_boolean_new(success));
+	json_rpc_return(jreq, json_boolean_new(success));
 }
 
 void resource_handler(struct evhttp_request *req, void *arg)
@@ -138,7 +143,7 @@ error:
 
 struct json_rpc *init_json_rpc_methods()
 {
-	struct json_rpc *jr = json_rpc_init();
+	struct json_rpc *jr = json_rpc_new();
 
 	if (json_rpc_add_method(jr, GET_DEVICES_METHOD, get_devices, NULL) == -1)
 		goto error;
@@ -152,7 +157,7 @@ struct json_rpc *init_json_rpc_methods()
 	return jr;
 
 error :
-	json_rpc_destroy(jr);
+	json_rpc_free(jr);
 	return NULL;
 }
 
@@ -162,7 +167,7 @@ int main ()
 	if (driver_init(DEVICES_FILE) != 0)
 		log_error("ERROR : Can`t init driver\n");
 
-	struct evhttp *eh = evhttp_start(HTTP_HOST, HTTP_PORT);
+	struct evhttp *eh = evhttp_start_ssl(HTTP_HOST, HTTP_PORT, SSL_CERT, SSL_KEYFILE, SSL_PASSWD);
 	if (eh == NULL)
 		return EXIT_FAILURE;
 
@@ -176,7 +181,7 @@ int main ()
 	event_dispatch();
 
 	evhttp_free(eh);
-	json_rpc_destroy(jr);
+	json_rpc_free(jr);
 	driver_destroy();
 
 	return 0;

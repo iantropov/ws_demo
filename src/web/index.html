@@ -46,7 +46,7 @@
 		function jsonRpcCall(config)
 		{
 			$.ajax({
-				url:			"http://127.0.0.1:8080/devices",
+				url:			"https://127.0.0.1:8080/devices",
 				type:		"POST",
 				success: 		config.callback,
 				data:		JSON.stringify(jsonRpcRequest(config.method, config.params)),
