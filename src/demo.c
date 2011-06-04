@@ -212,11 +212,11 @@ static void ws_send_request(int fd, short what, void *arg)
 {
 	struct ws_demo *wsd = (struct ws_demo *)arg;
 
-	if (wsd->counter++ == 3) {
-		json_rpc_tt_free(wsd->tt);
-		free(wsd);
-		return;
-	}
+//	if (wsd->counter++ == 3) {
+//		json_rpc_tt_free(wsd->tt);
+//		free(wsd);
+//		return;
+//	}
 
 	struct json_object *req = json_object_new();
 
@@ -285,7 +285,7 @@ static void ws_acceptcb(struct ws_accepter *wa, struct bufevent *bufev, void *ar
 		return;
 	}
 
-	struct timeval tv = {5, 0};
+	struct timeval tv = {7, 0};
 	event_set(&wsd->ev, -1, EV_TIMEOUT, ws_send_request, wsd);
 	if (event_add(&wsd->ev, &tv) == -1) {
 		ws_connection_free(conn);
