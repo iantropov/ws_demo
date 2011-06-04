@@ -7,139 +7,118 @@
 		<script type="text/javascript" src="js/jquery-1.5.1.min.js"></script>
 		<script type="text/javascript" src="js/jquery-strings-0.3.js"></script>
 		<script type="text/javascript" src="js/jquery-ui-1.8.11.custom.min.js"></script>
+		<script type="text/javascript" src="js/UI.js"></script>
+		<script type="text/javascript" src="js/JsonRpc.js"></script>
+		<script type="text/javascript" src="js/Util.js"></script>
+
 		<script type="text/javascript">
-		
-		function jsonRpcRequest(method, params)
-		{	
-			var req = {"jsonrpc":"2.0", "method":method, "id":1};
-			if (params)
-				req["params"] = params;
-				
-			return req;
-		}
-				
-		function addDevices(devices)
+								
+		function httpGetDevices()
 		{
-			$.tpl('device', [
-			    '<div class="device">',
-				'<h3>',
-					'<a href="#">{info:s}</a>',
-				'</h3>',
-				'<div id="{id:i}" class="devicecontent">',
-					'<div class="output">',
-						'<span>Current status : </span>',
-						'<span class="status">{status:i}</span>',
-					'</div>',
-					'<input class="input" type="text"></input>',
-					'<div class="button" style="margin-left:40px">Send</div>',
-				'</div>',
-			    '</div>'
-			]);
+			var jrpc = new JsonRpc();
 			
-			$.each(devices, 	function(idx, device)
-				{
-					$.tpl('device', device).appendTo("#devices");
-				}
-			);
-		};
-		
-		function jsonRpcCall(config)
-		{
-			$.ajax({
-				url:			"https://127.0.0.1:8080/devices",
-				type:		"POST",
-				success: 		config.callback,
-				data:		JSON.stringify(jsonRpcRequest(config.method, config.params)),
-				dataType:	"json",
-				contentType:	"application/json-rpc"				
-			});
-		}
-		
-		function getDevices()
-		{
-			jsonRpcCall({
-				callback: function(response)
-					{
-						if (response.error)
-							return;
-						addDevices(response.result);
-						accordion();
-					},
-				method : "get_devices"
-			});
-		};
-		
-		function createDelegate(callback, params, s)
-		{
-			var scope = s || window;
-			function delegate()
+			var jrpc_http = new JsonRpcHttp(jrpc, "/devices");
+			
+			var currentId;
+			var timer;
+			var timerCall = function()
 			{
-				callback.apply(scope, params);
+				jrpc_http.sendRequest(
+					Util.jsonRpcRequest('get_device_status', {id: currentId}),
+					function(status)
+					{
+						UI.setCurrentStatus({id: currentId, status: status});	
+					}
+				);
+			};
+			
+			var onExpand = function(collapsed, id)
+			{
+				if (collapsed || id != currentId)
+					clearInterval(timer);
+
+				if (!collapsed) {
+					timer = setInterval(timerCall, 5000);
+					currentId = id;
+				}
 			}
 			
-			return delegate;
+			var onClick = function(id, status)
+			{
+				jrpc_http.sendRequest(Util.jsonRpcRequest('set_device_status', {id: id, status: status}));
+			}
+			
+			var onDevices = function(devices)
+			{
+				UI.markupDevices(devices);
+				UI.showDevices(onExpand, onClick);			
+			}
+			
+			jrpc_http.sendRequest(Util.jsonRpcRequest('get_devices'), onDevices);
 		}
 		
-		function timerCall(id)
-		{
-			jsonRpcCall({
-						callback : function(response)
-							{
-								if (response.error)
-									return;
-									
-								$("#" + id + " .status").html(response.result);
-							}, 
-						method : "get_device_status", 
-						params : {id: parseInt(id)}
-			});
-		};
-		
-		function accordion()
-		{
-			var TIME = 5000;
-			var timer;
-			$("#devices").accordion({ 
-					header: "h3", 
-					collapsible: true,
-					active: -1,
-					change: 	function(event, ui)
-							{
-								if (ui.newContent.length == 0)
-									clearInterval(timer);
-								else
-									timer = setInterval(createDelegate(timerCall, [ui.newContent[0].id]), TIME);
-							}
-			});
-			$(".devicecontent").each(function()
+		function webSocketGetDevices()
+		{		
+			var jrpc = new JsonRpc();
+			jrpc.addMethod("set_device_status", UI.setCurrentStatus);
+			
+			var ws = new WebSocket(Util.createWSURI(window.location, "/ws"));
+			ws.onerror = function(){alert("Error in WebSocket connection!");};
+			ws.onclose = function(){alert("WebSocket connection closed!");};
+			
+			var jrpc_ws = new JsonRpcWebSocket(jrpc, ws);
+			
+			var onClick = function(id, status)
 			{
-					var device = this;
-					$(device).children(".button").button().bind("click", function()
+				jrpc_ws.sendRequest(Util.jsonRpcRequest('set_device_status', {id: id, status: status}));
+				jrpc_ws.sendRequest(
+					Util.jsonRpcRequest('get_device_status', {id: id}),
+					function(newStatus)
 					{
-						var status = parseInt($(device).children("input")[0].value);
-						jsonRpcCall({
-									method:"set_device_status", 
-									params:{id:parseInt(device.id), status: status}
-									});
+						UI.setCurrentStatus({id: id, status: newStatus});
 					}
-			);
-			});
-		};
-		
-		function fakeGetDevices()
-		{
-			addDevices([{id:1, info:"First device"}, {id:3, info:"Third device"}]);
-			accordion();
+				);
+			};
+			
+			var onDevices = function(devices)
+			{
+				UI.markupDevices(devices);
+				UI.showDevices(function(){}, onClick);
+			}
+			ws.onopen = function()
+			{
+				jrpc_ws.sendRequest(Util.jsonRpcRequest('get_devices'), onDevices);
+			}
 		};
 		
 		$(function(){
-			getDevices();
-			//fakeGetDevices();
+			
+			var hideButtons = function()
+			{
+				$(".button").button("destroy");
+				$(".button").hide();
+			};
+			
+			$("#button_ws").button().bind("click", function(){
+				if (typeof WebSocket !== "function") {
+					alert("Your browser doesn`t support WebSocket or this feature turned off!");
+					return;
+				}
+				hideButtons();
+				webSocketGetDevices();
+			});
+			
+			$("#button_http").button().bind("click", function(){
+				hideButtons();
+				httpGetDevices();
+			});					
 		});
 		</script>
 	</head>
 	<body>
-		<h1>Device List</h1>
+		<div id="header" style="width:50%"><h1 style="text-align:center">Device List</h1></div>
+		<div id="button_ws" class="button" style="margin-left:40px">WebSocket transport</div>
+		<div id="button_http" class="button" style="margin-left:40px">HTTP transport</div>
 		<div id="devices" style="width:50%"></div>
 	</body>
 </html>
