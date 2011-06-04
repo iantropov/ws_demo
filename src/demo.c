@@ -58,8 +58,6 @@
 struct ws_demo {
 	struct json_rpc_tt *tt;
 	struct event ev;
-
-	int counter;
 };
 
 static struct json_rpc *__jr;
@@ -211,12 +209,6 @@ error :
 static void ws_send_request(int fd, short what, void *arg)
 {
 	struct ws_demo *wsd = (struct ws_demo *)arg;
-
-//	if (wsd->counter++ == 3) {
-//		json_rpc_tt_free(wsd->tt);
-//		free(wsd);
-//		return;
-//	}
 
 	struct json_object *req = json_object_new();
 

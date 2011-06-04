@@ -1,0 +1,13 @@
+Demostration application.
+
+Consists from two parts : back-end and front-end.
+
+Back-end: supply JSON-RPC interface via HTTP and WebSocket
+
+Front-end: offer to user possibility to change state of device via browser interface.
+
+To start application - build, and launch from directory, where places 'web' directory.
+Launch options :
+-- ip address of host
+-- (optional) ssl - start listen crypted connections.
+Program waits connection on 8080 port.
