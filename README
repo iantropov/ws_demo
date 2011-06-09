@@ -11,3 +11,11 @@ Launch options :
 -- ip address of host
 -- (optional) ssl - start listen crypted connections.
 Program waits connection on 8080 port.
+
+Build-process:
+1. Install libevent (version < 2)
+2. Install libcheck (needed for tests)
+3. Build and install libevent0
+4. Build and install libws (WebSocket library)
+5. Build and install libjsonrpc
+6. Build and install demo (demo application)

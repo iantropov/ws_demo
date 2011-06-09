@@ -294,11 +294,16 @@ static void sig_handler(int sig, short what, void *arg)
 
 int main (int argc, char **argv)
 {
+	if (argc < 2) {
+		log_error("ERROR : Required parameter - IP ADDRESS - missed!");
+		return EXIT_FAILURE;
+	}
+
 	event_init();
 	if (driver_init(DEVICES_FILE) != 0)
 		log_error("ERROR : Can`t init driver\n");
 
-	char *host = (argc > 1) ? argv[1] : "192.168.0.100";
+	char *host = argv[1];
 
 	struct evhttp *eh = (argc > 2) ?
 						evhttp_start_ssl(host, HTTP_PORT, SSL_CERT, SSL_KEYFILE, SSL_PASSWD) :
