@@ -106,7 +106,7 @@ int main (int argc, char **argv)
 
 	struct evhttp *eh = (argc > 2) ?
 						evhttp_start_ssl(host, HTTP_PORT, SSL_CERT, SSL_KEYFILE, SSL_PASSWD) :
-						evhttp_start("192.168.0.100", HTTP_PORT);
+						evhttp_start(host, HTTP_PORT);
 	if (eh == NULL)
 		return EXIT_FAILURE;
 
