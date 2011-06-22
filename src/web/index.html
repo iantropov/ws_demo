@@ -7,118 +7,101 @@
 		<script type="text/javascript" src="js/jquery-1.5.1.min.js"></script>
 		<script type="text/javascript" src="js/jquery-strings-0.3.js"></script>
 		<script type="text/javascript" src="js/jquery-ui-1.8.11.custom.min.js"></script>
+		<script type="text/javascript" src="js/processing.js"></script>
+
 		<script type="text/javascript" src="js/UI.js"></script>
 		<script type="text/javascript" src="js/JsonRpc.js"></script>
 		<script type="text/javascript" src="js/Util.js"></script>
 
 		<script type="text/javascript">
-								
-		function httpGetDevices()
-		{
-			var jrpc = new JsonRpc();
-			
-			var jrpc_http = new JsonRpcHttp(jrpc, "/devices");
-			
-			var currentId;
-			var timer;
-			var timerCall = function()
-			{
-				jrpc_http.sendRequest(
-					Util.jsonRpcRequest('get_device_status', {id: currentId}),
-					function(status)
-					{
-						UI.setCurrentStatus({id: currentId, status: status});	
-					}
-				);
-			};
-			
-			var onExpand = function(collapsed, id)
-			{
-				if (collapsed || id != currentId)
-					clearInterval(timer);
-
-				if (!collapsed) {
-					timer = setInterval(timerCall, 5000);
-					currentId = id;
-				}
-			}
-			
-			var onClick = function(id, status)
-			{
-				jrpc_http.sendRequest(Util.jsonRpcRequest('set_device_status', {id: id, status: status}));
-			}
-			
-			var onDevices = function(devices)
-			{
-				UI.markupDevices(devices);
-				UI.showDevices(onExpand, onClick);			
-			}
-			
-			jrpc_http.sendRequest(Util.jsonRpcRequest('get_devices'), onDevices);
-		}
 		
 		function webSocketGetDevices()
 		{		
 			var jrpc = new JsonRpc();
 			jrpc.addMethod("set_device_status", UI.setCurrentStatus);
-			
+			jrpc.addMethod("set_rtdevice_status", function(params){UI.refreshRT(params.id, params.status)});
+
 			var ws = new WebSocket(Util.createWSURI(window.location, "/ws"));
 			ws.onerror = function(){alert("Error in WebSocket connection!");};
 			ws.onclose = function(){alert("WebSocket connection closed!");};
 			
 			var jrpc_ws = new JsonRpcWebSocket(jrpc, ws);
 			
-			var onClick = function(id, status)
+			var onStart = function(id)
 			{
-				jrpc_ws.sendRequest(Util.jsonRpcRequest('set_device_status', {id: id, status: status}));
 				jrpc_ws.sendRequest(
-					Util.jsonRpcRequest('get_device_status', {id: id}),
-					function(newStatus)
-					{
-						UI.setCurrentStatus({id: id, status: newStatus});
-					}
+					Util.jsonRpcRequest('rtdevice_start_track', {id: id})
 				);
 			};
 			
+			var onStop = function(id)
+			{
+				jrpc_ws.sendRequest(
+					Util.jsonRpcRequest('rtdevice_stop_track', {id: id})
+				);
+			}
+						
 			var onDevices = function(devices)
 			{
 				UI.markupDevices(devices);
-				UI.showDevices(function(){}, onClick);
+				UI.showDevices(function(id, status){
+					jrpc_ws.sendRequest(Util.jsonRpcRequest('set_device_status', {id: id, status: status}));
+				});
+				UI.showRTDevices(onStart, onStop);
+				
+				$(devices).each(function(idx, device) {
+					if (idx % 2 != 0 && device.type == "byte")
+						jrpc_ws.sendRequest(Util.jsonRpcRequest('device_start_track', {id: device.id}));
+				});
 			}
+
 			ws.onopen = function()
 			{
 				jrpc_ws.sendRequest(Util.jsonRpcRequest('get_devices'), onDevices);
 			}
+			
+			$("#send_request").button().bind("click", function() {
+				var method = $("#method_name").val();
+				if (method == "") {
+					alert("Enter method name!");
+					return;
+				}
+				var params_raw = $("#method_params").val();
+				var params = params_raw ? Util.decodeJSON(params_raw) : "";
+				if ($("#is_notify").attr("checked")) {
+					jrpc_ws.sendRequest(Util.jsonRpcRequest(method, params));
+				} else {
+					jrpc_ws.sendRequest(Util.jsonRpcRequest(method, params), function(response) {
+						alert(Util.encodeJSON(response));
+					});
+				}
+			});
+			
+			$("#is_notify").button();
 		};
 		
 		$(function(){
 			
-			var hideButtons = function()
-			{
-				$(".button").button("destroy");
-				$(".button").hide();
-			};
+			if (typeof WebSocket !== "function") {
+				alert("Your browser doesn`t support WebSocket or this feature turned off!");
+				return;
+			}
 			
-			$("#button_ws").button().bind("click", function(){
-				if (typeof WebSocket !== "function") {
-					alert("Your browser doesn`t support WebSocket or this feature turned off!");
-					return;
-				}
-				hideButtons();
-				webSocketGetDevices();
-			});
-			
-			$("#button_http").button().bind("click", function(){
-				hideButtons();
-				httpGetDevices();
-			});					
+			webSocketGetDevices();			
 		});
 		</script>
 	</head>
 	<body>
-		<div id="header" style="width:50%"><h1 style="text-align:center">Device List</h1></div>
-		<div id="button_ws" class="button" style="margin-left:40px">WebSocket transport</div>
-		<div id="button_http" class="button" style="margin-left:40px">HTTP transport</div>
-		<div id="devices" style="width:50%"></div>
+		<div id="header" class="ui-widget-header ui-corner-all ui-state-default" style="margin-bottom:15px;">
+			<h1 style="text-align:center">Device List</h1>
+		</div>
+		<div id="console" class="ui-state-hover ui-corner-all ui-widget ui-state-default" style="padding:5px; text-align:center; margin-bottom:15px;">
+			Method :<input type="text" id="method_name" value="get_device_status"/>
+			Params :<input type="text" id="method_params" value='{"id":1}'/>
+			<input type="checkbox" id="is_notify" style=""/><label for="is_notify">Notification</label>
+			<div id="send_request">Send request</div>
+		</div>
+		<div id="devices" style="width:49%; display:inline-block;"></div>
+		<div id="rtdevices" style="float:right; width:50%; display:inline-block;"></div>
 	</body>
 </html>

@@ -47,6 +47,26 @@ Util = (function()
 			var host = location.host;
 			
 			return $.format("{0}://{1}{2}", scheme, host, uri);
+		},
+		
+		getBits: function(num)
+		{
+			if (!Util.isDefined(num) || num <= 0)
+				return [];
+		
+			var bits = [];
+			var a = num, b;
+			while(true) {
+				b = Math.floor(a / 2);
+				bits.splice(0, 0, a - b * 2);
+				
+				if (a == 1)
+					break;
+				
+				a = b;
+			}
+			
+			return bits;
 		}
 	};
 })();
