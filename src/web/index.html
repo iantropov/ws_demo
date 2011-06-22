@@ -15,18 +15,50 @@
 
 		<script type="text/javascript">
 		
-		function webSocketGetDevices()
-		{		
-			var jrpc = new JsonRpc();
-			jrpc.addMethod("set_device_status", UI.setCurrentStatus);
-			jrpc.addMethod("set_rtdevice_status", function(params){UI.refreshRT(params.id, params.status)});
-
+		function initWebSocketConnection()
+		{
 			var ws = new WebSocket(Util.createWSURI(window.location, "/ws"));
 			ws.onerror = function(){alert("Error in WebSocket connection!");};
 			ws.onclose = function(){alert("WebSocket connection closed!");};
 			
-			var jrpc_ws = new JsonRpcWebSocket(jrpc, ws);
+			return ws;
+		}
+		
+		function initJrpcWebSocket(webSocket)
+		{
+			var jrpc = new JsonRpc();
+			jrpc.addMethod("set_device_status", UI.setCurrentStatus);
+			jrpc.addMethod("set_rtdevice_status", function(params){UI.refreshRT(params.id, params.status)});
 			
+			var jrpc_ws = new JsonRpcWebSocket(jrpc, webSocket);
+			
+			return jrpc_ws;
+		}
+		
+		function initConsole(jrpc_ws)
+		{
+			$("#send_request").button().bind("click", function() {
+				var method = $("#method_name").val();
+				if (method == "") {
+					alert("Enter method name!");
+					return;
+				}
+				var params_raw = $("#method_params").val();
+				var params = params_raw ? Util.decodeJSON(params_raw) : "";
+				if ($("#is_notify").attr("checked")) {
+					jrpc_ws.sendRequest(Util.jsonRpcRequest(method, params));
+				} else {
+					jrpc_ws.sendRequest(Util.jsonRpcRequest(method, params), function(response) {
+						alert(Util.encodeJSON(response));
+					});
+				}
+			});
+			
+			$("#is_notify").button();
+		}
+		
+		function initDevices(jrpc_ws, webSocket)
+		{		
 			var onStart = function(id)
 			{
 				jrpc_ws.sendRequest(
@@ -55,39 +87,24 @@
 				});
 			}
 
-			ws.onopen = function()
+			webSocket.onopen = function()
 			{
 				jrpc_ws.sendRequest(Util.jsonRpcRequest('get_devices'), onDevices);
 			}
-			
-			$("#send_request").button().bind("click", function() {
-				var method = $("#method_name").val();
-				if (method == "") {
-					alert("Enter method name!");
-					return;
-				}
-				var params_raw = $("#method_params").val();
-				var params = params_raw ? Util.decodeJSON(params_raw) : "";
-				if ($("#is_notify").attr("checked")) {
-					jrpc_ws.sendRequest(Util.jsonRpcRequest(method, params));
-				} else {
-					jrpc_ws.sendRequest(Util.jsonRpcRequest(method, params), function(response) {
-						alert(Util.encodeJSON(response));
-					});
-				}
-			});
-			
-			$("#is_notify").button();
 		};
-		
+
 		$(function(){
-			
+
 			if (typeof WebSocket !== "function") {
 				alert("Your browser doesn`t support WebSocket or this feature turned off!");
 				return;
 			}
-			
-			webSocketGetDevices();			
+
+			var webSocket = initWebSocketConnection();
+			var jrpc_ws = initJrpcWebSocket(webSocket);
+
+			initDevices(jrpc_ws, webSocket);
+			initConsole(jrpc_ws);
 		});
 		</script>
 	</head>
