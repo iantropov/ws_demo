@@ -53,10 +53,19 @@ static void get_devices(struct json_rpc_request *jreq, struct json_object *obj, 
 
 static void get_device_status(struct json_rpc_request *jreq, struct json_object *obj, void *arg)
 {
-	if (obj == NULL)
-		json_rpc_return(jreq, NULL);
+	if (obj == NULL) {
+		json_rpc_return(jreq, json_boolean_new(FALSE));
+		return;
+	}
 
-	int status = driver_get_device_status(json_int_get(json_object_get(obj, "id")));
+	struct json_object *j_id = json_object_get(obj, "id");
+	if (json_type(j_id) != json_type_int) {
+		json_ref_put(obj);
+		json_rpc_return(jreq, json_boolean_new(FALSE));
+		return;
+	}
+
+	int status = driver_get_device_status(json_int_get(j_id));
 
 	json_ref_put(obj);
 
@@ -65,8 +74,10 @@ static void get_device_status(struct json_rpc_request *jreq, struct json_object 
 
 static void set_device_status(struct json_rpc_request *jreq, struct json_object *obj, void *arg)
 {
-	if (obj == NULL)
-		json_rpc_return(jreq, NULL);
+	if (obj == NULL) {
+		json_rpc_return(jreq, json_boolean_new(FALSE));
+		return;
+	}
 
 	int success = TRUE;
 
@@ -128,8 +139,10 @@ static void track_rtdevice(int id, void *arg)
 
 static void device_start_track_common(struct json_rpc_request *jreq, struct json_object *obj, void *arg, void (*cb)(int, void *), int timeout)
 {
-	if (obj == NULL)
-		json_rpc_return(jreq, NULL);
+	if (obj == NULL) {
+		json_rpc_return(jreq, json_boolean_new(FALSE));
+		return;
+	}
 
 	int success = TRUE;
 
@@ -162,8 +175,10 @@ static void rtdevice_start_track(struct json_rpc_request *jreq, struct json_obje
 
 static void device_stop_track_common(struct json_rpc_request *jreq, struct json_object *obj, void *arg)
 {
-	if (obj == NULL)
-		json_rpc_return(jreq, NULL);
+	if (obj == NULL) {
+		json_rpc_return(jreq, json_boolean_new(FALSE));
+		return;
+	}
 
 	int success = TRUE;
 

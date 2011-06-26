@@ -1,0 +1,64 @@
+.light-off {
+	background-color: #DDD;
+}
+.light-on {
+	background-color: #EB8F00;
+}
+h1 {
+	text-align: center
+}
+#footer {
+	position:absolute;
+	bottom: 0px;
+	left: 0px;
+	width: 100%;
+}
+#bottom_panel {
+	margin: 10px;
+	padding: 10px;
+}
+.vertical {
+	vertical-align: middle;
+}
+#info {
+	display:inline-block;
+}
+#light {
+	width: 20px;
+	height: 20px;
+	display: inline-block;
+	float:right;
+}
+#console {
+	padding: 5px;
+	text-align: center;
+	margin-bottom: 15px;
+}
+#header {
+	margin-bottom: 15px;
+}
+#devices {
+	width: 49%;
+	display: inline-block;
+}
+#rtdevices {
+	float: right;
+	width: 50%;
+	display: inline-block;
+}
+.text {
+	font-size: 1.1em;
+	font-weight: bold;
+}
+.start-button {
+	margin: 0 40px 10px 0;
+}
+.stop-button {
+	margin:0 40px 10px 40px;
+}
+.label-number {
+	padding: 0.4em 1em;
+	width: 15px;
+	display: inline-block;
+	margin-right: -0.4em;
+}

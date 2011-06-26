@@ -19,7 +19,12 @@ Util = (function()
 		
 		decodeJSON: function(json)
 		{
-			return JSON.parse(json);
+			var res = null;
+			try {
+				res = JSON.parse(json);
+			} catch(e){}
+			
+			return res;
 		},
 		
 		createDelegate: function(func, scope)

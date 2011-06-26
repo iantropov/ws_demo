@@ -37,6 +37,8 @@ UI = function ()
 		new Processing($("#" + canvasId)[0], sketchProc);
 	}
 
+	EBus.declare("ui_device_change_status", "ui_rtdevice_start_track", "ui_rtdevice_stop_track");
+
 	return {
 		RT_RATE: 10,
 		RT_HEIGHT: 80,
@@ -44,7 +46,7 @@ UI = function ()
 		RT_RANGE: 256,
 		RT_ARRAY_SIZE: 50,
 
-		showDevices: function(onButtonClick)
+		showDevices: function()
 		{
 			$("#devices").accordion({ 
 					header:			"h3", 
@@ -65,7 +67,7 @@ UI = function ()
 							value += elem.checked * Math.pow(2, len - idx);
 						});
 					
-						onButtonClick(parseInt(set.id.split("cc")[1]), value);
+						EBus.fire("ui_device_change_status", parseInt(set.id.split("cc")[1]), value);
 					});
 				});
 			});
@@ -103,7 +105,7 @@ UI = function ()
 				];
 			
 				for (var i = 7; i > -1; i--) {
-					templ.push('<div style="padding:0.4em 1em; width:15px;display:inline-block;margin-right:-0.3em;">' + i + '</div>');
+					templ.push('<div class="label-number">' + i + '</div>');
 				}
 
 				templ.push('<div id="cc{id:i}" class="buttonset">');
@@ -129,8 +131,8 @@ UI = function ()
 						'<a href="#">{info:s}</a>',
 					'</h3>',
 					'<div id="{id:i}" class="rtdevicecontent">',
-						'<div class="start-button" style="margin: 0 40px 10px 0;">Start</div>',
-						'<div class="stop-button" style="margin:0 40px 10px 40px;">Stop</div>',
+						'<div class="start-button">Start</div>',
+						'<div class="stop-button">Stop</div>',
 						'<canvas id="canvas{id:i}"></canvas>',
 					'</div>',
 			    '</div>'
@@ -152,7 +154,7 @@ UI = function ()
 			});		
 		},
 		
-		showRTDevices: function(onStart, onStop)
+		showRTDevices: function()
 		{
 			$("#rtdevices").accordion({ 
 				header:			"h3",
@@ -166,19 +168,19 @@ UI = function ()
 				var startButton = $(device).children(".start-button");
 				var stopButton = $(device).children(".stop-button");
 				
-				var wrapClick = function(onClick, button)
+				var wrapClick = function(event, button)
 				{
 					return function() {
 						if (button.button("option", "disabled"))
 							return;
 						startButton.button("option", "disabled", !startButton.button("option", "disabled"));
 						stopButton.button("option", "disabled", !stopButton.button("option", "disabled"));
-						onClick(parseInt(device.id));
+						EBus.fire(event, parseInt(device.id));
 					}
 				};
 				
-				startButton.button().bind("click", wrapClick(onStart, startButton));
-				stopButton.button().bind("click", wrapClick(onStop, stopButton));
+				startButton.button().bind("click", wrapClick("ui_rtdevice_start_track", startButton));
+				stopButton.button().bind("click", wrapClick("ui_rtdevice_stop_track", stopButton));
 				stopButton.button("option", "disabled", true);
 				startButton.button("option", "disabled", false);
 			});
@@ -198,6 +200,11 @@ UI = function ()
 			for (var i = 0; i < UI.RT_ARRAY_SIZE; i++)
 				initialData.push(0);
 			$("#canvas" + id).data("points", initialData);
+		},
+		
+		setStats: function(req_in, req_out)
+		{
+			$("#info").text(req_in + " / " + req_out);
 		}
 	}
 }();

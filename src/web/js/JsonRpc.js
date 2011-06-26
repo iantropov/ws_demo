@@ -3,6 +3,8 @@ function JsonRpc()
 	this.requests = {};
 	this.methods = {};
 	
+	EBus.declare("jrpc_request", "jrpc_response");
+	
 	return this;
 }
 
@@ -11,6 +13,8 @@ JsonRpc.prototype.processRequest = function(req)
 	var method = req.method;
 	if (!Util.isDefined(method) || !Util.isDefined(this.methods[method]))
 		return;
+	
+	EBus.fire("jrpc_req_in", req);
 		
 	var result = this.methods[method](req.params);
 	if (Util.isDefined(req.id))
@@ -26,11 +30,15 @@ JsonRpc.prototype.processResponse = function(resp)
 	if (!Util.isDefined(resp.id) || resp.id === null || !Util.isDefined(this.requests[resp.id]))
 		return;
 		
+	EBus.fire("jrpc_resp_in", resp);
+		
 	this.requests[resp.id](Util.isDefined(resp.result) ? resp.result : resp.error);	
 }
 
 JsonRpc.prototype.preprocessRequest = function(req, callback, scope)
 {
+	EBus.fire("jrpc_req_out", req);
+	
 	if (Util.isDefined(req.id) && Util.isDefined(callback))
 		this.requests[req.id] = Util.createDelegate(callback, scope);
 }
