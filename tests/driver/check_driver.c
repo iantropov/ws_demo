@@ -5,14 +5,14 @@
 #include "../../src/driver.h"
 
 #define DEVICES_FILE "devices_test"
-#define DEVICES_JSON "[{\"id\":1, \"info\":\"First device\"}, {\"id\":3, \"info\":\"Third device\"}]"
+#define DEVICES_JSON "[{\"id\":1, \"info\":\"First device\", \"type\":\"RT\"}, {\"id\":3, \"info\":\"Third device\", \"type\":\"byte\"}]"
 
 
 START_TEST(test_driver)
 {
 	fail_unless(put_file_content(DEVICES_FILE, DEVICES_JSON, strlen(DEVICES_JSON) + 1) == 0, "put_file");
 
-	fail_unless(driver_init(DEVICES_FILE) == 0, "driver_init");
+	fail_unless(driver_load_devices(DEVICES_FILE) == 0, "driver_init");
 
 	fail_unless(strcmp(driver_get_device_info(1), "First device") == 0, "bad first info");
 	fail_unless(driver_get_device_info(2) == NULL, "bad missed info");

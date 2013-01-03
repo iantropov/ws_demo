@@ -19,3 +19,6 @@ Build-process:
 4. Build and install libws (WebSocket library)
 5. Build and install libjsonrpc
 6. Build and install demo (demo application)
+
+!IMPORTANT
+For correct work of front-end part you need a browser that implements 00 version of WebSocket protocol (e.g. Google Chrome 6, Firefox 4.0, Opera 11.00, Safari 5.01)
